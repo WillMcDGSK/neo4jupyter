@@ -25,6 +25,17 @@ neo4jupyter.draw(graph_object_py2neo, {"Nodes_type": "Att", …})
 
 I encourage you to read the [neo4jupyter.py](https://github.com/merqurio/neo4jupyter/blob/master/neo4jupyter.py) file, is small and subject to be enhanced.
 
+# Fork Information
+
+To draw a custom query, you can pass that query as a string into the `draw()` function. You must end the query with the following return statement:
+```
+RETURN n AS source_node,
+       id(n) AS source_id,
+       r,
+       m AS target_node,
+       id(m) AS target_id
+```
+
 #### Licence
 The MIT License (MIT) | See LICENSE.md
 Copyright (c) 2015, 2016, 2017, 2018 Gabriel de Maeztu, Marcus Rehm, Bruce Lowther
