@@ -1,7 +1,6 @@
 import os
 import json
 import uuid
-import tempfile
 from IPython.display import HTML, Javascript, display
 
 DEFAULT_PHYSICS = {
@@ -14,10 +13,6 @@ DEFAULT_PHYSICS = {
         }
     }
 }
-
-
-def get_visjs():
-    return
 
 
 def init_notebook_mode():
@@ -37,6 +32,7 @@ def init_notebook_mode():
                    css='https://cdnjs.cloudflare.com/ajax/libs/vis/4.8.2/vis.css')
         )
 
+
 def vis_network(nodes, edges, physics=True):
     """
     Creates the HTML page with all the parameters
@@ -53,7 +49,7 @@ def vis_network(nodes, edges, physics=True):
     return HTML(html)
 
 
-def draw(graph, options, physics=True, limit=100):
+def draw(graph, options, query=None, parameters=None, physics=True, limit=100):
     """
     The options argument should be a dictionary of node labels and property keys; it determines which property
     is displayed for the node label. For example, in the movie graph, options = {"Movie": "title", "Person": "name"}.
@@ -61,38 +57,51 @@ def draw(graph, options, physics=True, limit=100):
     Setting physics = True makes the nodes bounce around when you touch them!
 
     :param graph: Connection to the DB where the query will be executed.
+    :param query: The query to fetch the data from the DB
+    :param parameters: The parameters for the neo4j query
     :param options: Options for the Nodes.
     :param physics: Physics of the vis.js visualization.
     :param limit: Maximum number of Nodes or Edges.
     :return: IPython.display.HTML
     """
 
-    query = """
-    MATCH (n)
-    WITH n, rand() AS random
-    ORDER BY random
-    LIMIT $limit
-    OPTIONAL MATCH (n)-[r]->(m)
-    RETURN n AS source_node,
-           id(n) AS source_id,
-           r,
-           m AS target_node,
-           id(m) AS target_id
-    """
+    if query is None:
+        query = """
+        MATCH (n)
+        WITH n, rand() AS random
+        ORDER BY random
+        LIMIT $limit
+        OPTIONAL MATCH (n)-[r]->(m)
+        RETURN n AS source_node,
+               id(n) AS source_id,
+               r,
+               m AS target_node,
+               id(m) AS target_id
+        """
+    if parameters is None:
+        parameters = {}
 
-    data = graph.run(query, limit=limit)
+    data = graph.run(query, parameters=parameters, limit=limit)
 
     nodes = []
     edges = []
 
     def get_vis_info(node, id):
-        node_label = list(node.labels)[0]
-        prop_key = options.get(node_label)
-        vis_label = node.get(prop_key, "")
 
-        return {"id": id, "label": vis_label, "group": node_label, "title": repr(node)}
+        node_labels = [label for label in node.labels if label in options]
+
+        if len(node_labels) == 1:
+            node_label = node_labels[0]
+        else:
+            node_label = node_labels[0]  # for the moment, just take the first label that is in options
+            # could have a priority order that gets passed in
+        prop_key = options.get(node_label)
+        vis_label = f'{prop_key}: {node.get(prop_key, "")}'
+
+        return {"id": id, "label": vis_label, "group": node_label, "title": ", ".join(node.labels)}
 
     for row in data:
+
         source_node = row[0]
         source_id = row[1]
         rel = row[2]
@@ -114,18 +123,21 @@ def draw(graph, options, physics=True, limit=100):
 
     return vis_network(nodes, edges, physics=physics)
 
+
 def get_vis_edge_info(r):
     return({"from": id(r.start_node), "to": id(r.end_node), "label": r.__class__.__name__ })
 
-##calculate the dict that will represent a node.
+
+# calculate the dict that will represent a node.
 def get_vis_node_info(node, options):
     node_label = list(node.labels)[0]
     prop_key = options.get(node_label)
     vis_label = dict(node).get(prop_key, "")
-    
+
     return {"id": id(node), "label": vis_label, "group": node_label, "title": repr(node)}
 
-def draw_subgraph(subgraph, options, physics=True, limit=100):
+
+def draw_subgraph(subgraph, options, physics=True):
     """
     The options argument should be a dictionary of node labels and property keys; it determines which property
     is displayed for the node label. For example, in the movie graph, options = {"Movie": "title", "Person": "name"}.
