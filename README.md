@@ -27,7 +27,7 @@ I encourage you to read the [neo4jupyter.py](https://github.com/merqurio/neo4jup
 
 # Fork Information
 
-To draw a custom query, you can pass that query as a string into the `draw()` function. You must end the query with the following return statement:
+To draw a custom query, you can pass that query as a string into the `draw()` function using the `query` kwarg. You must end the query with the following return statement:
 ```
 RETURN n AS source_node,
        id(n) AS source_id,
@@ -35,6 +35,7 @@ RETURN n AS source_node,
        m AS target_node,
        id(m) AS target_id
 ```
+To pass parameters with the query, pass a dict of them into the `parameters` kwarg.
 
 #### Licence
 The MIT License (MIT) | See LICENSE.md
